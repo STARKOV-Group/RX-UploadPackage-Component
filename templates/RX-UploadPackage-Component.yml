@@ -13,14 +13,14 @@ RX-UploadPackage-Component:
     - if: $[[ inputs.rules ]] && $DeployMode != "upload"
       when: never
   script:
-    #Check for custom folder path. If not assigned, assign default value
+    # Check for custom folder path. If not assigned, assign default value
     - if ($UploadFolder -eq $null) {
         $folderPath = "CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH"
         $checkProject = "true"
       } else {
         $folderPath = $UploadFolder
       }
-    #Check for project's folder if needed
+    # Check for project's folder if needed
     - if ($checkProject -eq "true") {
         [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE
         $responses = $propResponse.multistatus.response
@@ -37,12 +37,12 @@ RX-UploadPackage-Component:
           }
         }
       }
-    #If folder not found create the folder
+    # If folder not found create the folder
     - if ($folderFound -eq "false")
       {
         C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE
       }
-    #Check for upload folder
+    # Check for upload folder
     - [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath
       $responses = $propResponse.multistatus.response
       $folderFound = "false"
@@ -58,12 +58,12 @@ RX-UploadPackage-Component:
         }
       }
     }
-    #If folder not found create the folder
+    # If folder not found create the folder
     - if ($folderFound -eq "false")
       {
         C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath
       }
-    #Check for today's folder
+    # Check for today's folder
     - $date = Get-Date -Format "dd/MM/yyyy"
       [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date
       $responses = $propResponse.multistatus.response
@@ -80,11 +80,11 @@ RX-UploadPackage-Component:
         }
       }
     }
-    #If folder not found create the folder
+    # If folder not found create the folder
     - if ($folderFound -eq "false")
       {
         C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date
       }
-    #Upload the file
+    # Upload the file
     - $uploadResponse = C:\Windows\System32\curl.exe -u "AutoDeliveryUser:GKwCfDwG3f" -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date"
     - if ($uploadResponse -eq $null) {} else { echo $uploadResponse; exit 1 }
