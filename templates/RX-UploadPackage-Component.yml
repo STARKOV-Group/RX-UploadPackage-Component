@@ -13,21 +13,44 @@ RX-UploadPackage-Component:
     - if: $[[ inputs.rules ]] && $DeployMode != "upload"
       when: never
   script:
-    # Check for custom folder path. If not assigned, assign default value
-    - if ($UploadFolder -eq $null) {
-        $folderPath = "CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH"
-        $checkProject = "true"
-      } else {
-        $folderPath = $UploadFolder
-      }
-    # Check for project's folder if needed
-    - if ($checkProject -eq "true") {
-        [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE
-        $responses = $propResponse.multistatus.response
-        $folderFound = "false"
+    - cd "C:\Program Files\curl"
+    - $isCustomFolder = "false"
+    - if (-not ($UploadFolder -eq $null)) 
+      {
+        $substrings = $UploadFolder.split("/");
+        $folderName = $substrings[$substrings.count - 1];
+        $folderPath = $substrings -replace "/$folderName", "";
+
+        $responseString = curl -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath;
+        $propResponse = [xml]$responseString;
+        $responses = $propResponse.multistatus.response;
         if ($responses) {
           foreach ($r in $responses) {
-            if ($r.propstat.prop.displayname -eq "folder 2")
+            if ($r.propstat.prop.displayname -eq "$folderName")
+            {
+              if ($r.propstat.prop.resourcetype)
+              {
+                $isCustomFolder = "true";
+                echo "Custom upload folder found $UploadFolder";
+                $destinationFolder = $UploadFolder
+              }
+            }
+          }
+        }
+      }
+    - if ($isCustomFolder -eq "false")
+      {
+        echo "Custom upload folder not found. Using default folder CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH";
+        
+        $responseString = .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD;
+        $propResponse = [xml]$responseString;
+        echo "Received project folder response from cloud";
+        $responses = $propResponse.multistatus.response;
+        $folderFound = "false";
+        if ($responses)
+        {
+          foreach ($r in $responses) {
+            if ($r.propstat.prop.displayname -eq "$CI_PROJECT_NAMESPACE")
             {
               if ($r.propstat.prop.resourcetype)
               {
@@ -36,19 +59,53 @@ RX-UploadPackage-Component:
             }
           }
         }
+        echo "Project folder found = $folderFound";
+        
+        if ($folderFound -eq "false")
+        {
+          echo "Creating project folder";
+          .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE
+        }
+
+        echo "Searching for branch folder";
+        $responseString = .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE;
+        $propResponse = [xml]$responseString;
+        echo "Received branch folder response from cloud";
+        $responses = $propResponse.multistatus.response;
+        $folderFound = "false";
+        if ($responses)
+        {
+          foreach ($r in $responses) {
+            if ($r.propstat.prop.displayname -eq "$CI_COMMIT_BRANCH")
+            {
+              if ($r.propstat.prop.resourcetype)
+              {
+                $folderFound = "true"
+              }
+            }
+          }
+        }
+        echo "Branch folder found = $folderFound";
+        
+        if ($folderFound -eq "false")
+        {
+          echo "Creating branch folder";
+          .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH
+        }
+
+        $destinationFolder = "CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH"
       }
-    # If folder not found create the folder
-    - if ($folderFound -eq "false")
+    - if ($destinationFolder -eq $null) { echo "Could not find or create upload folder"; exit 1 }
+    
+    - $date = Get-Date -Format "dd/MM/yyyy";
+    - $responseString = .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$destinationFolder;
+    - $propResponse = [xml]$responseString;
+    - $responses = $propResponse.multistatus.response;
+    - $folderFound = "false";
+    - if ($responses)
       {
-        C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/CI_CD/$CI_PROJECT_NAMESPACE
-      }
-    # Check for upload folder
-    - [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath
-      $responses = $propResponse.multistatus.response
-      $folderFound = "false"
-      if ($responses) {
         foreach ($r in $responses) {
-          if ($r.propstat.prop.displayname -eq "folder 2")
+          if ($r.propstat.prop.displayname -eq "$date")
           {
             if ($r.propstat.prop.resourcetype)
             {
@@ -57,34 +114,12 @@ RX-UploadPackage-Component:
           }
         }
       }
-    }
-    # If folder not found create the folder
+    
     - if ($folderFound -eq "false")
       {
-        C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath
+        .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$destinationFolder/$date
       }
-    # Check for today's folder
-    - $date = Get-Date -Format "dd/MM/yyyy"
-      [xml]$propResponse = C:\Windows\System32\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date
-      $responses = $propResponse.multistatus.response
-      $folderFound = "false"
-      if ($responses) {
-        foreach ($r in $responses) {
-          if ($r.propstat.prop.displayname -eq "folder 2")
-          {
-            if ($r.propstat.prop.resourcetype)
-            {
-              $folderFound = "true"
-            }
-          }
-        }
-      }
-    }
-    # If folder not found create the folder
-    - if ($folderFound -eq "false")
-      {
-        C:\Windows\System32\curl.exe -X MKCOL -u ":" https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date
-      }
-    # Upload the file
-    - $uploadResponse = C:\Windows\System32\curl.exe -u "AutoDeliveryUser:GKwCfDwG3f" -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$folderPath/$date"
-    - if ($uploadResponse -eq $null) {} else { echo $uploadResponse; exit 1 }
+    
+    - echo "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$destinationFolder/$date"
+    - $uploadResponse = .\curl.exe -u AutoDeliveryUser:GKwCfDwG3f -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/AutoDeliveryUser/$destinationFolder/$date/package.dat"
+    - if (-not ($uploadResponse -eq $null)) { echo $uploadResponse; exit 1 }
