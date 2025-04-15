@@ -134,5 +134,7 @@ RX-UploadPackage-Component:
       }
     
     - echo "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date"
-    - $uploadResponse = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date/package.dat"
+    - $uploadResponse = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date/$date.dat"
+    - if (-not ($uploadResponse -eq $null)) { echo $uploadResponse; exit 1 }
+    - $uploadResponse = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -T "$PackageProjectPath\package.xml" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date/$date.xml"
     - if (-not ($uploadResponse -eq $null)) { echo $uploadResponse; exit 1 }
