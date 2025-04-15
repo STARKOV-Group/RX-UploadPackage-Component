@@ -64,7 +64,20 @@ RX-UploadPackage-Component:
         if ($folderFound -eq "false")
         {
           echo "Creating project folder";
-          .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD/$CI_PROJECT_NAMESPACE
+          $substrings = $CI_PROJECT_NAMESPACE.split("/");
+          
+          foreach ($subDir in $substrings)
+          {
+            if ($projectPath -eq $null)
+            {
+              $projectPath = $subDir;
+            }
+            else
+            {
+              $projectPath = $projectPath + "/" + $subDir;
+            }
+            .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD/$projectPath
+          }
         }
 
         echo "Searching for branch folder";
