@@ -17,4 +17,5 @@ RX-UploadPackage-Component:
   script:
     # Переопределение путей с учетом веток. При изменении логики также поменять в BuildPackage, PreparedServer, DeployDTPackage, UploadPackage и VersionUp компонентах
     - $FormattedBranchName = ($CI_COMMIT_BRANCH -replace '\W', '_')
-    - C:\CICD\Tools\NextCloudConnector\NextCloudConnector.exe -u $CloudUserName -w $CloudUserPassword -l "https://sg-nextcloud.starkovgrp.ru" -n $CI_PROJECT_NAMESPACE -b $CI_COMMIT_BRANCH -p $PackageProjectPath -f $FormattedBranchName -c $UploadFolder
+
+    - C:\CICD\Tools\NextCloudConnector\NextCloudConnector.exe -u $CloudUserName -w $CloudUserPassword -l "https://адрес-облака.ru" -n $CI_PROJECT_NAMESPACE -b $CI_COMMIT_BRANCH -p $PackageProjectPath -f $FormattedBranchName -c $UploadFolder
