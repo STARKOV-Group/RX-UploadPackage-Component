@@ -6,9 +6,9 @@
 
 ##### Логика:
 
-Если значение переменной [DeployMode](https://git.starkovgrp.ru/ci-cd-components/RX-DeployDTPackage-Component#deploymode) не равно "upload", то этап пропускается
+Если значение переменной [DeployMode](https://github.com/STARKOV-Group/RX-DeployDTPackage-Component#deploymode) не равно "upload", то этап пропускается
 
-Из параметров CloudUserName и CloudUserPassword извлекаются логин и пароль пользователя корпоративного облака, под которым будет загружен пакет, расположенный по адресу [PackageProjectPath](https://git.starkovgrp.ru/ci-cd-components/Completed-RXDTDeploy-Component#packageprojectpath)
+Из параметров CloudUserName и CloudUserPassword извлекаются логин и пароль пользователя корпоративного облака, под которым будет загружен пакет, расположенный по адресу [PackageProjectPath](https://github.com/STARKOV-Group/Completed-RXDTDeploy-Component#packageprojectpath)
 
 C помощью [утилиты](https://git.starkovgrp.ru/gubarev/NextCloudConnector.git) этот пакет загружается в папку по адресу UploadFolder/{текущая дата в формате ГГГГ-ММ-ДД} или, если он не указан, то в папку по адресу CI\_CD/\$[CI\_PROJECT\_NAMESPACE](https://docs.gitlab.com/ci/variables/predefined_variables/#:~:text=project%2D1.-,CI_PROJECT_NAMESPACE,-Pre%2Dpipeline)/\$[CI\_COMMIT\_BRANCH](https://docs.gitlab.com/ci/variables/predefined_variables/#:~:text=running%20a%20pipeline.-,CI_COMMIT_BRANCH,-Pre%2Dpipeline)/{текущая дата в формате ГГГГ-ММ-ДД}
 
