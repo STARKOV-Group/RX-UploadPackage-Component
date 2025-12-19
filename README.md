@@ -4,6 +4,9 @@
 
 Выгрузка собранного пакета в корпоративное облако NextCloud с помощью [утилиты](https://git.starkovgrp.ru/gubarev/NextCloudConnector.git).
 
+> [!warning]
+> Перед использованием нужно форкнуть/слить себе репозиторий и заменить в yml файле RX-UploadPackage-Component.yml адрес-заглушку на адрес вашего облака NextCloud
+
 ##### Логика:
 
 Если значение переменной [DeployMode](https://github.com/STARKOV-Group/RX-DeployDTPackage-Component#deploymode) не равно "upload", то этап пропускается
@@ -33,3 +36,4 @@ C помощью [утилиты](https://git.starkovgrp.ru/gubarev/NextCloudCon
 **Описание:** Путь до кастомной папки в облаке  
 **Обязательность:** Нет  
 **Пример:** CICD/Alrosa/custom
+
