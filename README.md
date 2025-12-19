@@ -1,25 +1,35 @@
-# RX UploadPackage Component
+# Выгрузка пакета в корпоративное облако NextCloud (RX UploadPackage Component)
 
-Компонента выгружает собранный в компоненте RX BuildPackage Component пакет в корпоративное облако NextCloud.
-Для включения выгрузки пакета необходимо конфигурационном файле .gitlab-ci.yml передавать значение переменной DeployMode: "upload". Пример:
+#### Описание:
 
-variables:
-  RXVERSION: 4.6.49
-  DeployMode: "upload"
-  
-  
-Также в переменных CI CD репозитория необходимо указать имя и пароль пользователя, используемого для загрузки пакета в облако:
+Выгрузка собранного пакета в корпоративное облако NextCloud с помощью [утилиты](https://git.starkovgrp.ru/gubarev/NextCloudConnector.git).
 
-- CloudUserName : имя пользователя
-- CloudUserPassword : пароль пользователя
+##### Логика:
 
+Если значение переменной [DeployMode](https://git.starkovgrp.ru/ci-cd-components/RX-DeployDTPackage-Component#deploymode) не равно "upload", то этап пропускается
 
-Чтобы работала загрузка в пути по умолчанию рекомендуется использовать пользователя AutoDeliveryUser. По умолчанию компонента выгружает пакет по пути "CI_CD/[Имя группы]/[Имя ветки]/[Текущая дата]/package.dat"
-Однако можно указать и кастомный путь для пакета в переменной UploadFolder по шаблону: "Папка1/Папка2/../ПапкаN". В таком случае компонента создаст в конечной папке папку с текущей датой и загрузит пакет в нее. Пример:
-variables:
+Из параметров CloudUserName и CloudUserPassword извлекаются логин и пароль пользователя корпоративного облака, под которым будет загружен пакет, расположенный по адресу [PackageProjectPath](https://git.starkovgrp.ru/ci-cd-components/Completed-RXDTDeploy-Component#packageprojectpath)
 
-  RXVERSION: 4.6.49
-  DeployMode: "upload"
-  UploadFolder: "dev_packages/abgo/test"
-  
-В примере выше пакет окажется по пути "dev_packages/abgo/test/[Дата выгрузки]/package.dat"
+C помощью [утилиты](https://git.starkovgrp.ru/gubarev/NextCloudConnector.git) этот пакет загружается в папку по адресу UploadFolder/{текущая дата в формате ГГГГ-ММ-ДД} или, если он не указан, то в папку по адресу CI\_CD/\$[CI\_PROJECT\_NAMESPACE](https://docs.gitlab.com/ci/variables/predefined_variables/#:~:text=project%2D1.-,CI_PROJECT_NAMESPACE,-Pre%2Dpipeline)/\$[CI\_COMMIT\_BRANCH](https://docs.gitlab.com/ci/variables/predefined_variables/#:~:text=running%20a%20pipeline.-,CI_COMMIT_BRANCH,-Pre%2Dpipeline)/{текущая дата в формате ГГГГ-ММ-ДД}
+
+#### Переменные:
+
+##### Пользовательские настройки
+
+##### CloudUserName
+
+**Описание:** Логин пользователя под которым будет происходить загрузка на облако  
+**Обязательность:** Да  
+**Пример:** Amongus
+
+##### CloudUserPassword
+
+**Описание:** Пароль пользователя под которым будет происходить загрузка на облако  
+**Обязательность:** Да  
+**Пример:** 1Qwerty
+
+##### UploadFolder
+
+**Описание:** Путь до кастомной папки в облаке  
+**Обязательность:** Нет  
+**Пример:** CICD/Alrosa/custom

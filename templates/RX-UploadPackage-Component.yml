@@ -6,135 +6,15 @@ spec:
       default: '"true" == "true"'
 ---
 RX-UploadPackage-Component:
+  tags:
+    - $RunnerTags
   stage: $[[ inputs.stage ]]
   rules: 
-    - if: $[[ inputs.rules ]] && $DeployMode == "upload"
+    - if: $[[ inputs.rules ]] && ($DeployMode == "upload" || $DeployMode == "combined")
       when: on_success
-    - if: $[[ inputs.rules ]] && $DeployMode != "upload"
+    - if: $[[ inputs.rules ]] && $DeployMode != "upload" && $DeployMode != "combined"
       when: never
   script:
-    - cd "C:\Program Files\curl"
-    - $isCustomFolder = "false"
-    - if (-not ($UploadFolder -eq $null)) 
-      {
-        $substrings = $UploadFolder.split("/");
-        $folderName = $substrings[$substrings.count - 1];
-        $folderPath = $substrings -replace "/$folderName", "";
-
-        $responseString = curl -u ${CloudUserName}:${CloudUserPassword} -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$folderPath;
-        $propResponse = [xml]$responseString;
-        $responses = $propResponse.multistatus.response;
-        if ($responses) {
-          foreach ($r in $responses) {
-            if ($r.propstat.prop.displayname -eq "$folderName")
-            {
-              if ($r.propstat.prop.resourcetype)
-              {
-                $isCustomFolder = "true";
-                echo "Custom upload folder found $UploadFolder";
-                $destinationFolder = $UploadFolder
-              }
-            }
-          }
-        }
-      }
-    - if (($isCustomFolder -eq "false") -and ($CloudUserName -eq "AutoDeliveryUser"))
-      {
-        echo "Custom upload folder not found. Using default folder CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH";
-        
-        $responseString = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD;
-        $propResponse = [xml]$responseString;
-        echo "Received project folder response from cloud";
-        $responses = $propResponse.multistatus.response;
-        $folderFound = "false";
-        if ($responses)
-        {
-          foreach ($r in $responses) {
-            if ($r.propstat.prop.displayname -eq "$CI_PROJECT_NAMESPACE")
-            {
-              if ($r.propstat.prop.resourcetype)
-              {
-                $folderFound = "true"
-              }
-            }
-          }
-        }
-        echo "Project folder found = $folderFound";
-        
-        if ($folderFound -eq "false")
-        {
-          echo "Creating project folder";
-          $substrings = $CI_PROJECT_NAMESPACE.split("/");
-          
-          foreach ($subDir in $substrings)
-          {
-            if ($projectPath -eq $null)
-            {
-              $projectPath = $subDir;
-            }
-            else
-            {
-              $projectPath = $projectPath + "/" + $subDir;
-            }
-            .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD/$projectPath
-          }
-        }
-
-        echo "Searching for branch folder";
-        $responseString = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD/$CI_PROJECT_NAMESPACE;
-        $propResponse = [xml]$responseString;
-        echo "Received branch folder response from cloud";
-        $responses = $propResponse.multistatus.response;
-        $folderFound = "false";
-        if ($responses)
-        {
-          foreach ($r in $responses) {
-            if ($r.propstat.prop.displayname -eq "$CI_COMMIT_BRANCH")
-            {
-              if ($r.propstat.prop.resourcetype)
-              {
-                $folderFound = "true"
-              }
-            }
-          }
-        }
-        echo "Branch folder found = $folderFound";
-        
-        if ($folderFound -eq "false")
-        {
-          echo "Creating branch folder";
-          .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH
-        }
-
-        $destinationFolder = "CI_CD/$CI_PROJECT_NAMESPACE/$CI_COMMIT_BRANCH"
-      }
-    - if ($destinationFolder -eq $null) { echo "Could not find or create upload folder"; exit 1 }
-    
-    - $date = Get-Date -Format "dd/MM/yyyy";
-    - $responseString = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X PROPFIND --data-binary '@C:\CICD\NextCloud\searchfolder.txt' https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder;
-    - $propResponse = [xml]$responseString;
-    - $responses = $propResponse.multistatus.response;
-    - $folderFound = "false";
-    - if ($responses)
-      {
-        foreach ($r in $responses) {
-          if ($r.propstat.prop.displayname -eq "$date")
-          {
-            if ($r.propstat.prop.resourcetype)
-            {
-              $folderFound = "true"
-            }
-          }
-        }
-      }
-    
-    - if ($folderFound -eq "false")
-      {
-        .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -X MKCOL https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date
-      }
-    
-    - echo "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date"
-    - $uploadResponse = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -T "$PackageProjectPath\package.dat" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date/$date.dat"
-    - if (-not ($uploadResponse -eq $null)) { echo $uploadResponse; exit 1 }
-    - $uploadResponse = .\curl.exe -u ${CloudUserName}:${CloudUserPassword} -T "$PackageProjectPath\package.xml" "https://sg-nextcloud.starkovgrp.ru/remote.php/dav/files/$CloudUserName/$destinationFolder/$date/$date.xml"
-    - if (-not ($uploadResponse -eq $null)) { echo $uploadResponse; exit 1 }
+    # Переопределение путей с учетом веток. При изменении логики также поменять в BuildPackage, PreparedServer, DeployDTPackage, UploadPackage и VersionUp компонентах
+    - $FormattedBranchName = ($CI_COMMIT_BRANCH -replace '\W', '_')
+    - C:\CICD\Tools\NextCloudConnector\NextCloudConnector.exe -u $CloudUserName -w $CloudUserPassword -l "https://sg-nextcloud.starkovgrp.ru" -n $CI_PROJECT_NAMESPACE -b $CI_COMMIT_BRANCH -p $PackageProjectPath -f $FormattedBranchName -c $UploadFolder
